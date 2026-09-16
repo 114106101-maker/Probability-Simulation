@@ -11,15 +11,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 全局 CSS 注入 (質感卡片、骰子與微陰影效果)
+# 2. CSS 樣式注入
 st.markdown("""
 <style>
-/* 全局背景微調 */
 .stApp {
     background-color: #f8fafc;
 }
-
-/* 說明區卡片 */
 .info-card {
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
@@ -28,8 +25,6 @@ st.markdown("""
     margin-bottom: 15px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-
-/* 骰子展示容器 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
@@ -37,8 +32,6 @@ st.markdown("""
     margin: 10px 0;
     flex-wrap: wrap;
 }
-
-/* 單一骰子卡片 */
 .dice-card {
     width: 75px;
     height: 85px;
@@ -50,33 +43,26 @@ st.markdown("""
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease-in-out;
 }
-
 .dice-icon {
     font-size: 36px;
     line-height: 1;
     margin-bottom: 2px;
 }
-
 .dice-label {
     font-size: 11px;
     font-weight: 600;
     color: #64748b;
 }
-
-/* 相配成功樣式 */
 .dice-card.matched {
     border-color: #10b981;
     background: #ecfdf5;
     box-shadow: 0 8px 12px -2px rgba(16, 185, 129, 0.25);
     transform: translateY(-2px);
 }
-
 .dice-card.matched .dice-icon {
     color: #059669;
 }
-
 .dice-card.matched .dice-label {
     color: #047857;
     font-weight: 700;
@@ -92,15 +78,10 @@ def render_dice_html(rolls):
         is_match = (val == i)
         card_class = "dice-card matched" if is_match else "dice-card"
         badge = "✓ 相配" if is_match else f"第 {i} 擲"
-        cards_html.append(f'''
-            <div class="{card_class}">
-                <span class="dice-icon">{DICE_ICONS[val]}</span>
-                <span class="dice-label">{badge}</span>
-            </div>
-        ''')
+        cards_html.append(f'<div class="{card_class}"><span class="dice-icon">{DICE_ICONS[val]}</span><span class="dice-label">{badge}</span></div>')
     return f'<div class="dice-wrapper">{"".join(cards_html)}</div>'
 
-# 3. 高效向量化計算邏輯
+# 3. 數據計算邏輯
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -111,7 +92,7 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 頁面標頭與規則說明
+# 4. 實驗規則卡片
 st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
 
 st.markdown("""
@@ -122,7 +103,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 5. 側邊欄控制
+# 5. 控制面板
 with st.sidebar:
     st.header("⚙️ 模擬控制面板")
     total_n = st.slider("模擬總次數 (N)", 100, 2000, 1000, 100)
@@ -138,11 +119,10 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 6. 主體驗 logic
+# 6. 主體驗區域
 if start_btn or quick_btn:
     rolls, cum_successes, cum_p = run_simulation(total_n, seed)
     
-    # 即時數據儀表板 (KPI Metric Cards)
     st.subheader("📈 數據儀表板")
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     
@@ -151,7 +131,6 @@ if start_btn or quick_btn:
     kpi_p = m_col3.metric("估算 P(A)", "0.0000")
     kpi_theo = m_col4.metric("理論 P(A)", f"{p_theoretical:.4f}")
 
-    # 骰子與圖表顯示區
     with st.container(border=True):
         st.markdown("**🎲 最新一次丟擲結果**")
         dice_spot = st.empty()
@@ -163,9 +142,7 @@ if start_btn or quick_btn:
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
 
-    # 執行模式判斷
     if quick_btn:
-        # ⚡ 快速模式：直接呈現最後結果
         kpi_n.metric("當前模擬次數", f"{total_n}")
         kpi_succ.metric("成功次數 (事件 A)", f"{cum_successes[-1]}")
         kpi_p.metric("估算 P(A)", f"{cum_p[-1]:.4f}", delta=f"{cum_p[-1]-p_theoretical:.4f}")
@@ -173,19 +150,16 @@ if start_btn or quick_btn:
         dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
         chart_spot.line_chart(df_chart, height=350)
     else:
-        # 🚀 動畫模式
         progress_bar = st.progress(0)
         chunk = max(1, total_n // 50)
         
         for i in range(1, total_n + 1, chunk):
             progress_bar.progress(i / total_n)
             
-            # 即時更新儀表板數字
             kpi_n.metric("當前模擬次數", f"{i}")
             kpi_succ.metric("成功次數 (事件 A)", f"{cum_successes[i-1]}")
             kpi_p.metric("估算 P(A)", f"{cum_p[i-1]:.4f}", delta=f"{cum_p[i-1]-p_theoretical:.4f}")
             
-            # 更新骰子與圖表
             dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
             chart_spot.line_chart(df_chart.iloc[:i], height=350)
             
@@ -193,9 +167,8 @@ if start_btn or quick_btn:
             
         progress_bar.empty()
 
-    st.success(f"🎉 模擬完成！最終估算 $P(A) = {cum_p[-1]:.4f}$，與理論值差距為 ${abs(cum_p[-1]-p_theoretical):.4f}$")
+    st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值差距為 {abs(cum_p[-1]-p_theoretical):.4f}")
 
-    # (b) 指定模擬次數統計表格
     st.subheader("📊 指定模擬次數統計結果 (b)")
     targets = [n for n in [50, 100, 250, 500, 750, 1000] if n <= total_n]
     table_df = pd.DataFrame({
