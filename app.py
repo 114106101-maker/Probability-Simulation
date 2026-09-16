@@ -6,73 +6,96 @@ import plotly.graph_objects as go
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS Ultra Clean)",
+    page_title="🎲 骰子相配實驗 (iOS Design)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 強效 CSS 樣式 (包含骰子動態彈跳特效)
+# 2. 精緻 iOS 設計語言 CSS 樣式
 st.markdown("""
 <style>
 html, body, .stApp {
-    background-color: #ffffff !important;
+    background-color: #f2f2f7 !important;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
     color: #1c1c1e !important;
 }
 
 .main .block-container {
-    padding-top: 2rem !important;
+    padding-top: 1.8rem !important;
     padding-bottom: 2rem !important;
-    max-width: 1200px;
+    max-width: 1100px;
 }
 
-.stMarkdown, p, span, label, [data-testid="stMetricValue"], [data-testid="stMetricLabel"], [data-testid="stHeader"] {
-    color: #1c1c1e !important;
-}
-
+/* iOS 白色懸浮卡片 */
 .ios-card {
-    background: #f8f9fa;
+    background: #ffffff;
     border-radius: 20px;
     padding: 20px 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    border: 1px solid #e5e5ea;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
+/* iOS 指標 Metric 卡片 */
+.ios-kpi-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease;
+}
+
+.ios-kpi-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #8e8e93;
+    margin-bottom: 6px;
+}
+
+.ios-kpi-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1c1c1e;
+    letter-spacing: -0.5px;
+}
+
+/* iOS 骰子容器與動態 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
-    gap: 14px;
-    margin: 10px 0;
+    gap: 12px;
+    margin: 8px 0;
     flex-wrap: wrap;
 }
 
-/* 骰子更新時的彈跳動畫特效 */
-@keyframes dice-pop {
-    0% { transform: scale(0.85) translateY(-6px); opacity: 0.6; }
-    50% { transform: scale(1.08) translateY(2px); opacity: 0.9; }
+@keyframes ios-spring-pop {
+    0% { transform: scale(0.92) translateY(4px); opacity: 0.7; }
+    60% { transform: scale(1.04) translateY(-2px); }
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .dice-card {
-    width: 76px;
-    height: 90px;
+    width: 72px;
+    height: 86px;
     background: #ffffff;
     border-radius: 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e5e5ea;
-    animation: dice-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    animation: ios-spring-pop 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .dice-icon {
-    font-size: 38px;
+    font-size: 36px;
     line-height: 1;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     color: #1c1c1e;
 }
 
@@ -85,14 +108,25 @@ html, body, .stApp {
 .dice-card.matched {
     background: #34c759;
     border: none;
-    box-shadow: 0 6px 18px rgba(52, 199, 89, 0.35);
+    box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
     transform: scale(1.05);
 }
 
 .dice-card.matched .dice-icon,
 .dice-card.matched .dice-label {
     color: #ffffff !important;
-    font-weight: 700;
+}
+
+/* 覆蓋 Streamlit 預設按鈕與側邊欄風格 */
+div[data-testid="stSidebar"] {
+    background-color: #ffffff !important;
+    border-right: 1px solid rgba(0,0,0,0.05);
+}
+
+.stButton>button {
+    border-radius: 14px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,7 +142,15 @@ def render_dice_html(rolls):
         cards_html.append(f'<div class="{card_class}"><span class="dice-icon">{DICE_ICONS[val]}</span><span class="dice-label">{badge}</span></div>')
     return f'<div class="dice-wrapper">{"".join(cards_html)}</div>'
 
-# 3. 向量化計算邏輯
+def render_kpi_html(title, val, color="#1c1c1e"):
+    return f"""
+    <div class="ios-kpi-card">
+        <div class="ios-kpi-title">{title}</div>
+        <div class="ios-kpi-value" style="color: {color};">{val}</div>
+    </div>
+    """
+
+# 3. 向量化模擬邏輯
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -119,13 +161,13 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 保留圓點的高畫質 Plotly 圖表生成器
+# 4. iOS 風格 Plotly 圖表生成器
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
     fig = go.Figure()
 
-    # 理論 P(A) 參考虛線 (紅色)
+    # 理論 P(A) 參考虛線 (iOS System Red)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
@@ -135,21 +177,20 @@ def build_clean_plotly_chart(df_data, total_n_setting):
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 模擬 P(A) (全時保留圓點模式 lines+markers)
+    # 模擬 P(A) (iOS System Blue，帶圓點)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['模擬 P(A)'],
         mode='lines+markers',
         name='模擬 P(A)',
-        line=dict(color='#007AFF', width=1.8),
-        marker=dict(size=3.5, color='#007AFF', opacity=0.85),
+        line=dict(color='#007AFF', width=2.2),
+        marker=dict(size=4, color='#007AFF', opacity=0.85),
         hovertemplate='模擬次數 n: %{x}<br>估算 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 固定 X 軸與 Y 軸範圍
     fig.update_layout(
-        height=390,
-        margin=dict(l=15, r=15, t=30, b=15),
+        height=380,
+        margin=dict(l=10, r=10, t=25, b=10),
         paper_bgcolor='#ffffff',
         plot_bgcolor='#ffffff',
         hovermode='x unified',
@@ -179,14 +220,14 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     )
     return fig
 
-# 5. 主頁面內容
-st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
+# 5. 主頁面標題與簡介
+st.title("🎲 6 面骰子相配實驗")
 
 st.markdown("""
 <div class="ios-card">
-    <div style="font-size: 15px; line-height: 1.6;">
-        📌 <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲結果點數等於 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
-        只要 6 次丟擲中<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
+    <div style="font-size: 15px; line-height: 1.6; color: #1c1c1e;">
+        📌 <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲點數等於 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
+        6 次中只要<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
         🎯 <b>理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
     </div>
 </div>
@@ -194,7 +235,7 @@ st.markdown("""
 
 # 6. 側邊欄控制
 with st.sidebar:
-    st.header("⚙️ 模擬控制面板")
+    st.header("⚙️ 控制面板")
     
     if "total_n" not in st.session_state:
         st.session_state.total_n = 1000
@@ -216,7 +257,8 @@ with st.sidebar:
         st.number_input("輸入次數", 100, 10000, 100, key="input_n", on_change=sync_from_input, label_visibility="collapsed")
 
     total_n = st.session_state.total_n
-    fps = st.slider("動畫幀率 (FPS)", 5, 40, 20)
+    # 預設調降 FPS 讓動畫更舒緩，並可自訂
+    fps = st.slider("動畫速率 (FPS)", 2, 25, 10)
     seed = st.number_input("隨機種子 (Seed)", 0, 9999, 42)
     
     st.divider()
@@ -228,25 +270,30 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 7. 主數據區塊
+# 7. 主數據展現區塊
 if start_btn or quick_btn:
     rolls, cum_successes, cum_p = run_simulation(total_n, seed)
     
     st.subheader("📈 數據儀表板")
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     
-    kpi_n = m_col1.metric("當前模擬次數", "0")
-    kpi_succ = m_col2.metric("成功次數 (事件 A)", "0")
-    kpi_p = m_col3.metric("估算 P(A)", "0.0000")
-    kpi_theo = m_col4.metric("理論 P(A)", f"{p_theoretical:.4f}")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    spot_kpi1 = kpi1.empty()
+    spot_kpi2 = kpi2.empty()
+    spot_kpi3 = kpi3.empty()
+    spot_kpi4 = kpi4.empty()
 
-    with st.container(border=True):
-        st.markdown("**🎲 最新一次丟擲結果**")
+    spot_kpi1.markdown(render_kpi_html("模擬次數", "0"), unsafe_allow_html=True)
+    spot_kpi2.markdown(render_kpi_html("成功次數", "0"), unsafe_allow_html=True)
+    spot_kpi3.markdown(render_kpi_html("估算 P(A)", "0.0000", "#007AFF"), unsafe_allow_html=True)
+    spot_kpi4.markdown(render_kpi_html("理論 P(A)", f"{p_theoretical:.4f}", "#FF3B30"), unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown("<div style='margin-top: 10px;'><b>🎲 當前丟擲結果</b></div>", unsafe_allow_html=True)
         dice_spot = st.empty()
         dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
 
-    with st.container(border=True):
-        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(右上角可全螢幕，可透過滾輪/框選自由放大細節)*")
+    with st.container():
+        st.markdown("<div style='margin-top: 15px;'><b>📊 相對頻率 P(A) 收斂軌跡</b></div>", unsafe_allow_html=True)
         chart_spot = st.empty()
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
@@ -259,25 +306,25 @@ if start_btn or quick_btn:
     }
 
     if quick_btn:
-        kpi_n.metric("當前模擬次數", f"{total_n}")
-        kpi_succ.metric("成功次數 (事件 A)", f"{cum_successes[-1]}")
-        kpi_p.metric("估算 P(A)", f"{cum_p[-1]:.4f}", delta=f"{cum_p[-1]-p_theoretical:.4f}")
+        spot_kpi1.markdown(render_kpi_html("模擬次數", f"{total_n}"), unsafe_allow_html=True)
+        spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[-1]}"), unsafe_allow_html=True)
+        spot_kpi3.markdown(render_kpi_html("估算 P(A)", f"{cum_p[-1]:.4f}", "#007AFF"), unsafe_allow_html=True)
         
         dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
         chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
     else:
         progress_bar = st.progress(0)
         
-        # 建立影格序列：確保均勻取樣且最後一影格必定為 total_n
-        num_frames = min(total_n, 35)
+        # 提高採樣密度至 60 影格，搭配細膩 timing 控制動畫節奏
+        num_frames = min(total_n, 60)
         frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
         
         for idx, i in enumerate(frame_indices):
             progress_bar.progress(int((idx + 1) / len(frame_indices) * 100))
             
-            kpi_n.metric("當前模擬次數", f"{i}")
-            kpi_succ.metric("成功次數 (事件 A)", f"{cum_successes[i-1]}")
-            kpi_p.metric("估算 P(A)", f"{cum_p[i-1]:.4f}", delta=f"{cum_p[i-1]-p_theoretical:.4f}")
+            spot_kpi1.markdown(render_kpi_html("模擬次數", f"{i}"), unsafe_allow_html=True)
+            spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[i-1]}"), unsafe_allow_html=True)
+            spot_kpi3.markdown(render_kpi_html("估算 P(A)", f"{cum_p[i-1]:.4f}", "#007AFF"), unsafe_allow_html=True)
             
             dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
             chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:i], total_n), use_container_width=True, config=plotly_config)
@@ -288,7 +335,7 @@ if start_btn or quick_btn:
 
     st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
-    st.subheader("📊 指定模擬次數統計結果 (b)")
+    st.subheader("📊 指定模擬次數統計結果")
     targets = [n for n in [50, 100, 250, 500, 750, 1000] if n <= total_n]
     table_df = pd.DataFrame({
         '模擬次數 (n)': targets,
@@ -299,4 +346,4 @@ if start_btn or quick_btn:
     st.dataframe(table_df, use_container_width=True, hide_index=True)
 
 else:
-    st.info("👈 請點擊左側控制面板的 **「🚀 開始動畫」** 或 **「⚡ 直接結算」** 啟動實驗模擬！")
+    st.info("👈 請點擊左側面板的 **「🚀 開始動畫」** 或 **「⚡ 直接結算」** 啟動實驗！")
