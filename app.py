@@ -5,76 +5,66 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
-# 1. 頁面配置(Page Configuration)
+# 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (Dice Matching Experiment)",
+    page_title="🎲 骰子相配實驗",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS style
-st.markdown("""
+# 2. 清除全形空白與 Tab 縮排，修正按鈕與純白背景 CSS
+custom_css = textwrap.dedent("""
 <style>
-html, body, .stApp {
-    background-color: #f2f2f7 !important;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+    background-color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif !important;
     color: #1c1c1e !important;
 }
 
 .main .block-container {
-    padding-top: 1.8rem !important;
+    padding-top: 1.5rem !important;
     padding-bottom: 2rem !important;
     max-width: 1100px;
 }
 
-/*白色懸浮卡片 */
 .card {
     background: #ffffff;
     border-radius: 20px;
     padding: 20px 24px;
     margin-bottom: 18px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* 指標 Metric 卡片 */
-.kpi-card {
+.ios-kpi-card {
     background: #ffffff;
     border-radius: 18px;
     padding: 16px;
     text-align: center;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.kpi-title {
+.ios-kpi-title {
     font-size: 13px;
     font-weight: 500;
     color: #8e8e93;
     margin-bottom: 6px;
 }
 
-.kpi-value {
+.ios-kpi-value {
     font-size: 24px;
     font-weight: 700;
     color: #1c1c1e;
-    letter-spacing: -0.5px;
 }
 
-/* 骰子容器與動態 (Dice Containers and Dynamics) */
 .dice-wrapper {
     display: flex;
     justify-content: center;
     gap: 12px;
     margin: 8px 0;
     flex-wrap: wrap;
-}
-
-@keyframes ios-spring-pop {
-    0% { transform: scale(0.92) translateY(4px); opacity: 0.7; }
-    60% { transform: scale(1.04) translateY(-2px); }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .dice-card {
@@ -88,7 +78,6 @@ html, body, .stApp {
     justify-content: center;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.06);
-    animation: ios-spring-pop 0.35s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .dice-icon {
@@ -108,7 +97,6 @@ html, body, .stApp {
     background: #34c759;
     border: none;
     box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
-    transform: scale(1.05);
 }
 
 .dice-card.matched .dice-icon,
@@ -117,16 +105,43 @@ html, body, .stApp {
 }
 
 div[data-testid="stSidebar"] {
-    background-color: #ffffff !important;
-    border-right: 1px solid rgba(0,0,0,0.05);
+    background-color: #f8f9fa !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.stButton>button {
+/* 修復按鈕文字不見問題 */
+div.stButton > button {
     border-radius: 14px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d1d6 !important;
+    transition: all 0.2s ease !important;
+}
+
+div.stButton > button, div.stButton > button p, div.stButton > button span {
+    color: #1c1c1e !important;
     font-weight: 600 !important;
 }
+
+div.stButton > button:hover {
+    background-color: #e5e5ea !important;
+}
+
+div.stButton > button[kind="primary"] {
+    background-color: #007aff !important;
+    border: none !important;
+}
+
+div.stButton > button[kind="primary"], div.stButton > button[kind="primary"] p, div.stButton > button[kind="primary"] span {
+    color: #ffffff !important;
+}
+
+div.stButton > button[kind="primary"]:hover {
+    background-color: #0056b3 !important;
+}
 </style>
-""", unsafe_allow_html=True)
+""")
+
+st.markdown(custom_css, unsafe_allow_html=True)
 
 DICE_ICONS = {1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅'}
 
@@ -136,19 +151,18 @@ def render_dice_html(rolls):
         is_match = (val == i)
         card_class = "dice-card matched" if is_match else "dice-card"
         badge = "✓ 相配" if is_match else f"第 {i} 擲"
-        badge = "✓ match" if is_match else f"The {i}th throw"
         cards_html.append(f'<div class="{card_class}"><span class="dice-icon">{DICE_ICONS[val]}</span><span class="dice-label">{badge}</span></div>')
     return f'<div class="dice-wrapper">{"".join(cards_html)}</div>'
 
 def render_kpi_html(title, val, color="#1c1c1e"):
-    return f"""
+    return textwrap.dedent(f"""
     <div class="ios-kpi-card">
         <div class="ios-kpi-title">{title}</div>
         <div class="ios-kpi-value" style="color: {color};">{val}</div>
     </div>
-    """
+    """)
 
-# 3. 向量化模擬邏輯 (Vectorized analog logic)
+# 3. 向量化模擬邏輯
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -159,7 +173,7 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. Plotly 圖表生成器 (Plotly Chart Generator)
+# 4. Plotly 圖表生成器
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
@@ -168,13 +182,10 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
-        y=df_reset['theory P(A)'],
         mode='lines',
         name='理論 P(A)',
-        name='theory P(A)',
         line=dict(color='#FF3B30', width=2, dash='dash'),
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
-        hovertemplate='theory P(A): %{y:.4f}<extra></extra>'
     ))
 
     fig.add_trace(go.Scatter(
@@ -219,20 +230,18 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     )
     return fig
 
-# 5. 初始化 Session State (動畫播放狀態管理)
+# 5. 初始化 Session State
 if "anim_status" not in st.session_state:
-    st.session_state.anim_status = "idle"  # idle, running, paused, finished
+    st.session_state.anim_status = "idle"
 if "current_step_idx" not in st.session_state:
     st.session_state.current_step_idx = 0
 if "total_n" not in st.session_state:
     st.session_state.total_n = 1000
 
-# 6. 主頁面標題與簡介
-st.title("🎲 6 面骰子相配實驗")
-
+# 6. 主頁面說明
 st.markdown(
     textwrap.dedent("""
-<div class="ios-card">
+<div class="card">
     <div style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #1c1c1e;">🎲 6 面骰子相配實驗</div>
     <div style="font-size: 14px; line-height: 1.6; color: #3a3a3c;">
         📌 <b>規則：</b> 丟擲一粒公平骰子 6 次，若第 <i>k</i> 次丟擲點數等於 <i>k</i>（<i>k</i> = 1..6）稱為<b>「相配」</b>。<br>
@@ -246,7 +255,7 @@ st.markdown(
 
 # 7. 側邊欄控制
 with st.sidebar:
-    st.header("⚙️ 控制面板 control Panel")
+    st.header("⚙️ 控制面板")
 
     def sync_from_slider():
         st.session_state.total_n = st.session_state.slider_n
@@ -260,7 +269,6 @@ with st.sidebar:
     st.session_state.input_n = st.session_state.total_n
 
     st.markdown("**模擬總次數 (N)**")
-    st.markdown("**Total number of simulations (N)**")
     col_s1, col_s2 = st.columns([3, 2])
     with col_s1:
         st.slider("拉動次數", 100, 10000, 100, key="slider_n", on_change=sync_from_slider, label_visibility="collapsed")
@@ -273,18 +281,12 @@ with st.sidebar:
     
     st.divider()
 
-    # 動畫控制按鈕
     col_b1, col_b2, col_b3 = st.columns(3)
-    
     start_click = col_b1.button("🚀 開始", type="primary", use_container_width=True)
-    
-    # 動態按鈕名稱：根據當前狀態顯示「暫停」或「繼續」
     pause_label = "▶️ 繼續" if st.session_state.anim_status == "paused" else "⏸️ 暫停"
     pause_click = col_b2.button(pause_label, use_container_width=True)
-    
     quick_click = col_b3.button("⚡ 結算", use_container_width=True)
 
-    # 處理按鈕觸發事件
     if start_click:
         st.session_state.anim_status = "running"
         st.session_state.current_step_idx = 0
@@ -303,12 +305,11 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 8. 數據準備與渲染 logic
+# 8. 數據準備與渲染
 rolls, cum_successes, cum_p = run_simulation(total_n, seed)
 num_frames = min(total_n, 60)
 frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
 
-# 主數據面板
 st.subheader("📈 數據儀表板")
 
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -334,7 +335,6 @@ plotly_config = {
     'modeBarButtonsToRemove': ['lasso2d']
 }
 
-# 渲染特定影格的 UI
 def render_frame_ui(frame_n):
     spot_kpi1.markdown(render_kpi_html("模擬次數", f"{frame_n}"), unsafe_allow_html=True)
     spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[frame_n-1]}"), unsafe_allow_html=True)
@@ -344,7 +344,6 @@ def render_frame_ui(frame_n):
     dice_spot.markdown(render_dice_html(rolls[frame_n-1]), unsafe_allow_html=True)
     chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:frame_n], total_n), use_container_width=True, config=plotly_config)
 
-# 根據當前動畫狀態執行對應動作
 if st.session_state.anim_status == "idle":
     render_frame_ui(1)
     st.info("👈 請點擊左側面板的 **「🚀 開始」** 播放動畫，或 **「⚡ 結算」** 直接觀看結果！")
@@ -375,7 +374,6 @@ elif st.session_state.anim_status == "running":
     st.session_state.anim_status = "finished"
     st.rerun()
 
-# 底部數據表格
 if st.session_state.anim_status in ["paused", "finished"]:
     st.subheader("📊 指定模擬次數統計結果")
     targets = [n for n in [50, 100, 250, 500, 750, 1000] if n <= total_n]
