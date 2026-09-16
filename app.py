@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS 樣式 (純白背景與雙語排版優化)
+# 2. CSS 樣式 (蘋果 macOS Dock 放大效果)
 custom_css = textwrap.dedent("""
 <style>
 html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
@@ -37,7 +37,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.kpi-card {
+.ios-kpi-card {
     background: #ffffff;
     border-radius: 18px;
     padding: 14px 10px;
@@ -46,7 +46,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.kpi-title {
+.ios-kpi-title {
     font-size: 12px;
     font-weight: 500;
     color: #8e8e93;
@@ -60,26 +60,36 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     color: #1c1c1e;
 }
 
+/* --- Apple Dock 容器設定 --- */
 .dice-wrapper {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin: 12px 0;
+    align-items: flex-end; /* 底部對齊，確保向上放大伸展 */
+    gap: 14px;
+    margin: 24px 0;
+    padding: 15px 0;
     flex-wrap: wrap;
 }
 
+/* --- 骰子卡片基礎樣式 --- */
 .dice-card {
     width: 85px;
     height: 92px;
     background: #ffffff;
-    border-radius: 18px;
+    border-radius: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    
+    /* macOS Dock 核心：以底部為基準放大，搭配蘋果彈簧曲線 cubic-bezier */
+    transform-origin: bottom center;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.35s ease,
+                background-color 0.3s ease;
+    cursor: pointer;
 }
 
 .dice-icon {
@@ -97,18 +107,33 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     line-height: 1.2;
 }
 
-/* 綠色相配狀態：放大 1.12 倍與彈性陰影 */
+/* --- macOS Dock 綠色相配彈跳放大 (Match State) --- */
 .dice-card.matched {
-    background: #34c759;
+    background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
     border: none;
-    box-shadow: 0 8px 24px rgba(52, 199, 89, 0.45);
-    transform: scale(1.12);
-    z-index: 2;
+    box-shadow: 0 14px 28px rgba(52, 199, 89, 0.45);
+    transform: translateY(-12px) scale(1.28); /* 向上浮空 + 放大 1.28 倍 */
+    z-index: 10;
 }
 
 .dice-card.matched .dice-icon,
 .dice-card.matched .dice-label {
     color: #ffffff !important;
+}
+
+/*  互動波浪效果 (Hover Wave Effect) --- */
+/* 1. 當前 Hover 的骰子放大並浮起 */
+.dice-card:hover {
+    transform: translateY(-16px) scale(1.35) !important;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15) !important;
+    z-index: 30 !important;
+}
+
+/* 2. 左右兩側相鄰的骰子微幅放大（營造波浪連續曲面） */
+.dice-card:has(+ .dice-card:hover),
+.dice-card:hover + .dice-card {
+    transform: translateY(-6px) scale(1.12);
+    z-index: 20;
 }
 
 div[data-testid="stSidebar"] {
