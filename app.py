@@ -5,15 +5,15 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
-# 1. 頁面配置
+# 1. 頁面配置(Page Configuration)
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS Design)",
+    page_title="🎲 骰子相配實驗 (Dice Matching Experiment)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 精緻 iOS 設計語言 CSS 樣式
+# 2. CSS style
 st.markdown("""
 <style>
 html, body, .stApp {
@@ -28,8 +28,8 @@ html, body, .stApp {
     max-width: 1100px;
 }
 
-/* iOS 白色懸浮卡片 */
-.ios-card {
+/*白色懸浮卡片 */
+.card {
     background: #ffffff;
     border-radius: 20px;
     padding: 20px 24px;
@@ -38,8 +38,8 @@ html, body, .stApp {
     border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-/* iOS 指標 Metric 卡片 */
-.ios-kpi-card {
+/* 指標 Metric 卡片 */
+.kpi-card {
     background: #ffffff;
     border-radius: 18px;
     padding: 16px;
@@ -48,21 +48,21 @@ html, body, .stApp {
     border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.ios-kpi-title {
+.kpi-title {
     font-size: 13px;
     font-weight: 500;
     color: #8e8e93;
     margin-bottom: 6px;
 }
 
-.ios-kpi-value {
+.kpi-value {
     font-size: 24px;
     font-weight: 700;
     color: #1c1c1e;
     letter-spacing: -0.5px;
 }
 
-/* iOS 骰子容器與動態 */
+/* 骰子容器與動態 (Dice Containers and Dynamics) */
 .dice-wrapper {
     display: flex;
     justify-content: center;
@@ -136,6 +136,7 @@ def render_dice_html(rolls):
         is_match = (val == i)
         card_class = "dice-card matched" if is_match else "dice-card"
         badge = "✓ 相配" if is_match else f"第 {i} 擲"
+        badge = "✓ match" if is_match else f"The {i}th throw"
         cards_html.append(f'<div class="{card_class}"><span class="dice-icon">{DICE_ICONS[val]}</span><span class="dice-label">{badge}</span></div>')
     return f'<div class="dice-wrapper">{"".join(cards_html)}</div>'
 
@@ -147,7 +148,7 @@ def render_kpi_html(title, val, color="#1c1c1e"):
     </div>
     """
 
-# 3. 向量化模擬邏輯
+# 3. 向量化模擬邏輯 (Vectorized analog logic)
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -158,7 +159,7 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. iOS 風格 Plotly 圖表生成器
+# 4. Plotly 圖表生成器 (Plotly Chart Generator)
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
@@ -167,10 +168,13 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
+        y=df_reset['theory P(A)'],
         mode='lines',
         name='理論 P(A)',
+        name='theory P(A)',
         line=dict(color='#FF3B30', width=2, dash='dash'),
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
+        hovertemplate='theory P(A): %{y:.4f}<extra></extra>'
     ))
 
     fig.add_trace(go.Scatter(
@@ -242,7 +246,7 @@ st.markdown(
 
 # 7. 側邊欄控制
 with st.sidebar:
-    st.header("⚙️ 控制面板")
+    st.header("⚙️ 控制面板 control Panel")
 
     def sync_from_slider():
         st.session_state.total_n = st.session_state.slider_n
@@ -256,6 +260,7 @@ with st.sidebar:
     st.session_state.input_n = st.session_state.total_n
 
     st.markdown("**模擬總次數 (N)**")
+    st.markdown("**Total number of simulations (N)**")
     col_s1, col_s2 = st.columns([3, 2])
     with col_s1:
         st.slider("拉動次數", 100, 10000, 100, key="slider_n", on_change=sync_from_slider, label_visibility="collapsed")
