@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
-# 1. 頁面配置
+# 1. 頁面配置(Page Configuration)
 st.set_page_config(
     page_title="🎲 骰子相配實驗 | Dice Matching Experiment",
     page_icon="🎲",
@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS 樣式 (蘋果 macOS Dock 放大效果)
+# 2. CSS style (骰子與按鈕放大效果 Dice and button magnification effect)
 custom_css = textwrap.dedent("""
 <style>
 html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
@@ -60,18 +60,17 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     color: #1c1c1e;
 }
 
-/* --- Apple Dock 容器設定 --- */
+/* --- 骰子容器 (Dice container) --- */
 .dice-wrapper {
     display: flex;
     justify-content: center;
-    align-items: flex-end; /* 底部對齊，確保向上放大伸展 */
+    align-items: flex-end;
     gap: 14px;
     margin: 24px 0;
     padding: 15px 0;
     flex-wrap: wrap;
 }
 
-/* --- 骰子卡片基礎樣式 --- */
 .dice-card {
     width: 85px;
     height: 92px;
@@ -84,7 +83,6 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.08);
     
-    /* macOS Dock 核心：以底部為基準放大，搭配蘋果彈簧曲線 cubic-bezier */
     transform-origin: bottom center;
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.35s ease,
@@ -107,12 +105,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     line-height: 1.2;
 }
 
-/* --- macOS Dock 綠色相配彈跳放大 (Match State) --- */
 .dice-card.matched {
     background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
     border: none;
     box-shadow: 0 14px 28px rgba(52, 199, 89, 0.45);
-    transform: translateY(-12px) scale(1.28); /* 向上浮空 + 放大 1.28 倍 */
+    transform: translateY(-12px) scale(1.28);
     z-index: 10;
 }
 
@@ -121,15 +118,12 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     color: #ffffff !important;
 }
 
-/*  互動波浪效果 (Hover Wave Effect) --- */
-/* 1. 當前 Hover 的骰子放大並浮起 */
 .dice-card:hover {
     transform: translateY(-16px) scale(1.35) !important;
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15) !important;
     z-index: 30 !important;
 }
 
-/* 2. 左右兩側相鄰的骰子微幅放大（營造波浪連續曲面） */
 .dice-card:has(+ .dice-card:hover),
 .dice-card:hover + .dice-card {
     transform: translateY(-6px) scale(1.12);
@@ -141,12 +135,19 @@ div[data-testid="stSidebar"] {
     border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* --- 按鈕風格動畫 (控制面板)  Button-style animation (Control Panel) --- */
 div.stButton > button {
-    border-radius: 14px !important;
+    border-radius: 16px !important;
     background-color: #ffffff !important;
-    border: 1px solid #d1d1d6 !important;
-    transition: all 0.2s ease !important;
-    padding: 0.5rem 0.25rem !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    padding: 0.6rem 0.25rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    
+    /* 放大曲線與基準點 (Magnified curve and reference point) */
+    transform-origin: bottom center !important;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease,
+                background-color 0.2s ease !important;
 }
 
 div.stButton > button, div.stButton > button p, div.stButton > button span {
@@ -155,21 +156,35 @@ div.stButton > button, div.stButton > button p, div.stButton > button span {
     font-size: 13px !important;
 }
 
+/* 按鈕 Hover 懸浮放大效果 (Button Hover Zoom Effect) */
 div.stButton > button:hover {
-    background-color: #e5e5ea !important;
+    background-color: #f2f2f7 !important;
+    transform: translateY(-5px) scale(1.08) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+    z-index: 10 !important;
 }
 
+/* 按鈕按下時的回彈感 (The tactile feedback when the button is pressed) */
+div.stButton > button:active {
+    transform: translateY(-1px) scale(0.96) !important;
+    transition: transform 0.1s ease !important;
+}
+
+/* 主要按鈕 (Start) 特殊 Dock 光澤與放大  (Main button (Start) with special Dock finish and magnification.)*/
 div.stButton > button[kind="primary"] {
-    background-color: #007aff !important;
+    background: linear-gradient(135deg, #007aff 0%, #0056b3 100%) !important;
     border: none !important;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3) !important;
 }
 
-div.stButton > button[kind="primary"], div.stButton > button[kind="primary"] p, div.stButton > button[kind="primary"] span {
+div.stButton > button[kind="primary"], 
+div.stButton > button[kind="primary"] p, 
+div.stButton > button[kind="primary"] span {
     color: #ffffff !important;
 }
 
 div.stButton > button[kind="primary"]:hover {
-    background-color: #0056b3 !important;
+    box-shadow: 0 10px 24px rgba(0, 122, 255, 0.45) !important;
 }
 </style>
 """)
@@ -195,7 +210,7 @@ def render_kpi_html(title_cn, title_en, val, color="#1c1c1e"):
     </div>
     """)
 
-# 3. 向量化模擬邏輯
+# 3. 向量化模擬邏輯 (Vectorized analog logic)
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -206,7 +221,7 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. Plotly 圖表生成器
+# 4. Plotly 圖表生成器 (Plotly Chart Generator)
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
@@ -263,7 +278,7 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     )
     return fig
 
-# 5. 初始化 Session State
+# 5. 初始化 Session State (Initialize Session State)
 if "anim_status" not in st.session_state:
     st.session_state.anim_status = "idle"
 if "current_step_idx" not in st.session_state:
@@ -271,7 +286,7 @@ if "current_step_idx" not in st.session_state:
 if "total_n" not in st.session_state:
     st.session_state.total_n = 1000
 
-# 6. 主頁面說明
+# 6. 主頁面說明 (Main page description)
 st.markdown(
     textwrap.dedent("""
 <div class="card">
@@ -288,7 +303,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 7. 側邊欄控制面板
+# 7. 側邊欄控制面板 (Sidebar Control Panel)
 with st.sidebar:
     st.header("⚙️ 控制面板 (Control Panel)")
 
@@ -340,7 +355,7 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 8. 數據準備與渲染
+# 8. 數據準備與渲染 (Data preparation and rendering)
 rolls, cum_successes, cum_p = run_simulation(total_n, seed)
 num_frames = min(total_n, 60)
 frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
