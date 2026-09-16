@@ -6,35 +6,31 @@ import plotly.graph_objects as go
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS Light Edition)",
+    page_title="🎲 骰子相配實驗 (iOS Smooth Edition)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 強效 CSS 修復 (強制相容各種瀏覽器主題與 Streamlit 原生元件)
+# 2. 強效 CSS 樣式 (相容深淺色模式與 iOS 質感)
 st.markdown("""
 <style>
-/* 強制設定全頁面背景與字體 */
 html, body, .stApp {
     background-color: #ffffff !important;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
     color: #1c1c1e !important;
 }
 
-/* 修正 Streamlit 主容器邊界與內距 */
 .main .block-container {
     padding-top: 2.5rem !important;
     padding-bottom: 2rem !important;
     max-width: 1200px;
 }
 
-/* 強制將所有標籤與數據指標字體設為深色，防止深色模式下變成白色字體 */
 .stMarkdown, p, span, label, [data-testid="stMetricValue"], [data-testid="stMetricLabel"], [data-testid="stHeader"] {
     color: #1c1c1e !important;
 }
 
-/* iOS 毛玻璃風格說明卡片 */
 .ios-card {
     background: #f8f9fa;
     border-radius: 20px;
@@ -44,7 +40,6 @@ html, body, .stApp {
     border: 1px solid #e5e5ea;
 }
 
-/* 骰子展示區塊 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
@@ -53,7 +48,6 @@ html, body, .stApp {
     flex-wrap: wrap;
 }
 
-/* 骰子卡片 */
 .dice-card {
     width: 76px;
     height: 90px;
@@ -81,7 +75,6 @@ html, body, .stApp {
     color: #8e8e93;
 }
 
-/* 骰子相配成功高亮態 */
 .dice-card.matched {
     background: #34c759;
     border: none;
@@ -119,8 +112,8 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 乾淨穩定的 Plotly 圖表生成器
-def build_clean_plotly_chart(df_data):
+# 4. 防閃爍 Plotly 圖表生成器 (固定 Y 軸與刻度範圍)
+def build_stable_plotly_chart(df_data, is_final=False):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
     fig = go.Figure()
@@ -145,6 +138,17 @@ def build_clean_plotly_chart(df_data):
         hovertemplate='模擬次數 n: %{x}<br>估算 P(A): %{y:.4f}<extra></extra>'
     ))
 
+    # 動畫中固定 Y 軸範圍防止抖動閃爍；動畫完成後解除固定以便自由縮放
+    yaxis_config = dict(
+        title='相對頻率 P(A)',
+        showgrid=True,
+        gridcolor='#f2f2f7',
+        zeroline=False,
+        tickformat='.3f'
+    )
+    if not is_final:
+        yaxis_config['range'] = [0.3, 0.9]
+
     fig.update_layout(
         height=380,
         margin=dict(l=10, r=10, t=25, b=10),
@@ -157,20 +161,15 @@ def build_clean_plotly_chart(df_data):
             gridcolor='#f2f2f7',
             zeroline=False
         ),
-        yaxis=dict(
-            title='相對頻率 P(A)',
-            showgrid=True,
-            gridcolor='#f2f2f7',
-            zeroline=False,
-            tickformat='.3f'
-        ),
+        yaxis=yaxis_config,
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
             x=1
-        )
+        ),
+        uirevision='constant'  # 核心關鍵：維持圖表狀態，防止重繪閃爍
     )
     return fig
 
@@ -241,7 +240,7 @@ if start_btn or quick_btn:
         dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(右上角可全螢幕；亦可透過滾輪/框選進行縮放)*")
+        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(動畫完成後可自由放大/縮放)*")
         chart_spot = st.empty()
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
@@ -259,10 +258,10 @@ if start_btn or quick_btn:
         kpi_p.metric("估算 P(A)", f"{cum_p[-1]:.4f}", delta=f"{cum_p[-1]-p_theoretical:.4f}")
         
         dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
-        chart_spot.plotly_chart(build_clean_plotly_chart(df_chart), use_container_width=True, config=plotly_config)
+        chart_spot.plotly_chart(build_stable_plotly_chart(df_chart, is_final=True), use_container_width=True, config=plotly_config, key="chart_final")
     else:
         progress_bar = st.progress(0)
-        chunk = max(1, total_n // 50)
+        chunk = max(1, total_n // 40)  # 調整適當分段數，降低重繪頻率
         
         for i in range(1, total_n + 1, chunk):
             progress_bar.progress(i / total_n)
@@ -272,11 +271,13 @@ if start_btn or quick_btn:
             kpi_p.metric("估算 P(A)", f"{cum_p[i-1]:.4f}", delta=f"{cum_p[i-1]-p_theoretical:.4f}")
             
             dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
-            chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:i]), use_container_width=True, config=plotly_config)
+            chart_spot.plotly_chart(build_stable_plotly_chart(df_chart.iloc[:i], is_final=False), use_container_width=True, config=plotly_config, key="chart_anim")
             
             time.sleep(1 / fps)
             
         progress_bar.empty()
+        # 動畫結束後切換為完全自由縮放圖表
+        chart_spot.plotly_chart(build_stable_plotly_chart(df_chart, is_final=True), use_container_width=True, config=plotly_config, key="chart_done")
 
     st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
