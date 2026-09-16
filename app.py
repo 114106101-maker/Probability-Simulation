@@ -6,47 +6,46 @@ import plotly.graph_objects as go
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS Light)",
+    page_title="🎲 骰子相配實驗",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. iOS 純白極簡 CSS 樣式與按鈕修復
+# 2. 清除所有縮排以防止 Markdown 渲染出程式碼區塊
 st.markdown("""
 <style>
-/* 全局純白/淺灰背景 */
 html, body, .stApp {
-    background-color: #f2f2f7 !important;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif !important;
-    color: #1c1c1e !important;
+background-color: #ffffff !important;
+font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif !important;
+color: #1c1c1e !important;
 }
 
 .main .block-container {
-    padding-top: 1.5rem !important;
-    padding-bottom: 2rem !important;
-    max-width: 1050px;
+padding-top: 1.5rem !important;
+padding-bottom: 2rem !important;
+max-width: 1050px;
 }
 
-/* Dynamic Island 動態島膠囊 */
+/* 頂部動態島 */
 .dynamic-island {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: fit-content;
-    margin: 0 auto 20px auto;
-    padding: 8px 22px;
-    background: #1c1c1e;
-    border-radius: 30px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+display: flex;
+align-items: center;
+justify-content: space-between;
+width: fit-content;
+margin: 0 auto 20px auto;
+padding: 8px 22px;
+background: #1c1c1e;
+border-radius: 30px;
+box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .island-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 10px;
-    display: inline-block;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+margin-right: 10px;
+display: inline-block;
 }
 
 .island-dot.running { background: #34c759; box-shadow: 0 0 8px #34c759; }
@@ -55,150 +54,136 @@ html, body, .stApp {
 .island-dot.idle { background: #8e8e93; }
 
 .island-text {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    color: #ffffff !important;
+font-size: 13px;
+font-weight: 600;
+color: #ffffff !important;
 }
 
-/* iOS 白色懸浮卡片 */
+/* 白色卡片 */
 .ios-card {
-    background: #ffffff;
-    border-radius: 22px;
-    padding: 22px 26px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+background: #f8f9fa;
+border-radius: 20px;
+padding: 20px 24px;
+margin-bottom: 20px;
+border: 1px solid #e5e5ea;
 }
 
 .ios-section-title {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #8e8e93;
-    margin: 18px 0 8px 4px;
+font-size: 12px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.8px;
+color: #8e8e93;
+margin: 18px 0 8px 4px;
 }
 
-/* iOS KPI 數據卡片 */
+/* 指標卡片 */
 .ios-kpi-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 16px 12px;
-    text-align: center;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+background: #ffffff;
+border-radius: 18px;
+padding: 16px 12px;
+text-align: center;
+border: 1px solid #e5e5ea;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .ios-kpi-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #8e8e93;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
+font-size: 11px;
+font-weight: 600;
+color: #8e8e93;
+margin-bottom: 4px;
 }
 
 .ios-kpi-value {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: #1c1c1e;
+font-size: 24px;
+font-weight: 800;
+color: #1c1c1e;
 }
 
-/* 骰子卡片 */
+/* 骰子樣式 */
 .dice-wrapper {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin: 12px 0;
-    flex-wrap: wrap;
-}
-
-@keyframes ios-pop {
-    0% { transform: scale(0.9) translateY(4px); opacity: 0.7; }
-    60% { transform: scale(1.04) translateY(-2px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); }
+display: flex;
+justify-content: center;
+gap: 12px;
+margin: 12px 0;
+flex-wrap: wrap;
 }
 
 .dice-card {
-    width: 78px;
-    height: 92px;
-    background: #ffffff;
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-    animation: ios-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+width: 78px;
+height: 92px;
+background: #ffffff;
+border-radius: 18px;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+border: 1px solid #e5e5ea;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .dice-icon {
-    font-size: 38px;
-    line-height: 1;
-    margin-bottom: 4px;
-    color: #1c1c1e;
+font-size: 38px;
+line-height: 1;
+margin-bottom: 4px;
+color: #1c1c1e;
 }
 
 .dice-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 12px;
-    background: #e5e5ea;
-    color: #8e8e93;
+font-size: 10px;
+font-weight: 700;
+padding: 3px 8px;
+border-radius: 10px;
+background: #e5e5ea;
+color: #636366;
 }
 
 .dice-card.matched {
-    background: #34c759;
-    border: none;
-    box-shadow: 0 6px 20px rgba(52, 199, 89, 0.35);
-    transform: scale(1.05);
+background: #34c759;
+border: none;
+box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);
 }
 
 .dice-card.matched .dice-icon {
-    color: #ffffff !important;
+color: #ffffff !important;
 }
 
 .dice-card.matched .dice-badge {
-    background: rgba(255, 255, 255, 0.3);
-    color: #ffffff !important;
+background: rgba(255, 255, 255, 0.3);
+color: #ffffff !important;
 }
 
 /* 側邊欄與按鈕顏色修復 */
 div[data-testid="stSidebar"] {
-    background-color: #ffffff !important;
-    border-right: 1px solid rgba(0, 0, 0, 0.06);
+background-color: #f8f9fa !important;
+border-right: 1px solid #e5e5ea;
 }
 
+/* 強制所有按鈕高對比顯示 */
 div.stButton > button {
-    border-radius: 14px !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 0.55rem 0.8rem !important;
-    border: none !important;
-    background-color: #e5e5ea !important;
-    color: #1c1c1e !important; /* 強制深色文字 */
-    box-shadow: none !important;
-    transition: all 0.15s ease !important;
+border-radius: 12px !important;
+font-weight: 600 !important;
+font-size: 14px !important;
+border: 1px solid #d1d1d6 !important;
+background-color: #ffffff !important;
+color: #1c1c1e !important;
+box-shadow: none !important;
 }
 
 div.stButton > button:hover {
-    background-color: #d1d1d6 !important;
-    color: #000000 !important;
+background-color: #e5e5ea !important;
+color: #000000 !important;
 }
 
 div.stButton > button[kind="primary"] {
-    background-color: #007aff !important;
-    color: #ffffff !important; /* 主要按鈕為藍底白字 */
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25) !important;
+background-color: #007aff !important;
+color: #ffffff !important;
+border: none !important;
 }
 
 div.stButton > button[kind="primary"]:hover {
-    background-color: #0062cc !important;
-    color: #ffffff !important;
+background-color: #0056b3 !important;
+color: #ffffff !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -235,7 +220,7 @@ def render_kpi_html(title, val, color="#1c1c1e"):
     </div>
     """
 
-# 3. 向量化模擬邏輯
+# 3. 模擬邏輯
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -246,13 +231,12 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. iOS 亮色風格 Plotly 圖表
+# 4. Plotly 圖表生成
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
     fig = go.Figure()
 
-    # 理論 P(A)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
@@ -262,7 +246,6 @@ def build_clean_plotly_chart(df_data, total_n_setting):
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 模擬 P(A)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['模擬 P(A)'],
@@ -314,13 +297,12 @@ if "current_step_idx" not in st.session_state:
 if "total_n" not in st.session_state:
     st.session_state.total_n = 1000
 
-# 6. 動態島狀態更新
 island_spot = st.empty()
 
-# 7. 主標題與說明卡片
+# 6. 主頁面說明
 st.markdown("""
 <div class="ios-card">
-    <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; color: #1c1c1e;">🎲 6 面骰子相配實驗</div>
+    <div style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #1c1c1e;">🎲 6 面骰子相配實驗</div>
     <div style="font-size: 14px; line-height: 1.6; color: #3a3a3c;">
         📌 <b>規則：</b> 丟擲一粒公平骰子 6 次，若第 $k$ 次丟擲點數等於 $k$（$k=1..6$）稱為<b>「相配」</b>。<br>
         6 次中只要<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
@@ -329,7 +311,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 8. 側邊欄控制
+# 7. 側邊欄控制
 with st.sidebar:
     st.markdown('<div class="ios-section-title">⚙️ 控制選項</div>', unsafe_allow_html=True)
 
@@ -381,7 +363,7 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 9. 數據與儀表板渲染
+# 8. 數據與儀表板
 rolls, cum_successes, cum_p = run_simulation(total_n, seed)
 num_frames = min(total_n, 60)
 frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
@@ -420,7 +402,7 @@ def render_frame_ui(frame_n):
     dice_spot.markdown(render_dice_html(rolls[frame_n-1]), unsafe_allow_html=True)
     chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:frame_n], total_n), use_container_width=True, config=plotly_config)
 
-# 動態處理邏輯
+# 狀態切換
 if st.session_state.anim_status == "idle":
     island_spot.markdown(render_dynamic_island("系統就緒 • 點擊開始模擬", "idle"), unsafe_allow_html=True)
     render_frame_ui(1)
