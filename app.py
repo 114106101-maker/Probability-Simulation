@@ -37,7 +37,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.ios-kpi-card {
+.kpi-card {
     background: #ffffff;
     border-radius: 18px;
     padding: 14px 10px;
@@ -46,7 +46,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.ios-kpi-title {
+.kpi-title {
     font-size: 12px;
     font-weight: 500;
     color: #8e8e93;
@@ -64,7 +64,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin: 8px 0;
+    margin: 12px 0;
     flex-wrap: wrap;
 }
 
@@ -79,6 +79,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     justify-content: center;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .dice-icon {
@@ -96,10 +97,13 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"]
     line-height: 1.2;
 }
 
+/* 綠色相配狀態：放大 1.12 倍與彈性陰影 */
 .dice-card.matched {
     background: #34c759;
     border: none;
-    box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
+    box-shadow: 0 8px 24px rgba(52, 199, 89, 0.45);
+    transform: scale(1.12);
+    z-index: 2;
 }
 
 .dice-card.matched .dice-icon,
@@ -112,7 +116,6 @@ div[data-testid="stSidebar"] {
     border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* 修復按鈕樣式與字體對比度 */
 div.stButton > button {
     border-radius: 14px !important;
     background-color: #ffffff !important;
@@ -178,7 +181,7 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. Plotly 圖表生成器 (雙語圖例與座標軸)
+# 4. Plotly 圖表生成器
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
     
@@ -243,7 +246,7 @@ if "current_step_idx" not in st.session_state:
 if "total_n" not in st.session_state:
     st.session_state.total_n = 1000
 
-# 6. 主頁面說明 (中英雙語)
+# 6. 主頁面說明
 st.markdown(
     textwrap.dedent("""
 <div class="card">
@@ -260,7 +263,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 7. 側邊欄控制面板 (雙語)
+# 7. 側邊欄控制面板
 with st.sidebar:
     st.header("⚙️ 控制面板 (Control Panel)")
 
@@ -289,10 +292,10 @@ with st.sidebar:
     st.divider()
 
     col_b1, col_b2, col_b3 = st.columns(3)
-    start_click = col_b1.button("🚀 開始<br>Start", type="primary", use_container_width=True)
-    pause_label = "▶️ 繼續<br>Resume" if st.session_state.anim_status == "paused" else "⏸️ 暫停<br>Pause"
+    start_click = col_b1.button("🚀 開始 Start", type="primary", use_container_width=True)
+    pause_label = "▶️ 繼續 Resume" if st.session_state.anim_status == "paused" else "⏸️ 暫停 Pause"
     pause_click = col_b2.button(pause_label, use_container_width=True)
-    quick_click = col_b3.button("⚡ 結算<br>Finish", use_container_width=True)
+    quick_click = col_b3.button("⚡ 結算 Finish", use_container_width=True)
 
     if start_click:
         st.session_state.anim_status = "running"
