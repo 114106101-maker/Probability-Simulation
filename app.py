@@ -5,90 +5,87 @@ import streamlit as st
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS 27 Spatial OS)",
+    page_title="🎲 骰子相配實驗 (iOS Light Edition)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 注入 iOS 27 超未來空間感 CSS 樣式 (Spatial Cyber Glass & Neon Mesh)
+# 2. 注入 iOS 純白空間感 CSS 樣式 (Light Spatial Glass)
 st.markdown("""
 <style>
-/* iOS 27 全局極致深空背景與 SF Pro Spatial 字體系 */
+/* 全局純白背景與 SF Pro 字體系 */
 .stApp {
-    background: radial-gradient(circle at 50% 10%, #161936 0%, #090a15 60%, #030308 100%) !important;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
-    color: #f0f2f8;
+    background-color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: #1c1c1e;
 }
 
-/* iOS 27 空間懸浮毛玻璃卡片 (Spatial Glass) */
-.ios27-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border-radius: 28px;
-    padding: 22px 28px;
+/* iOS 空間懸浮毛玻璃卡片 (Light Glass) */
+.ios-card {
+    background: rgba(248, 249, 250, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 20px 26px;
     margin-bottom: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* 骰子展示區域 */
+/* 骰子展示容器 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
-    gap: 18px;
-    margin: 16px 0;
+    gap: 16px;
+    margin: 14px 0;
     flex-wrap: wrap;
 }
 
-/* iOS 27 3D 擬真態懸浮骰子卡片 */
+/* iOS 超圓角懸浮骰子卡片 */
 .dice-card {
-    width: 82px;
-    height: 98px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 24px;
+    width: 80px;
+    height: 94px;
+    background: #ffffff;
+    border-radius: 22px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.15);
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .dice-icon {
-    font-size: 42px;
+    font-size: 40px;
     line-height: 1;
-    margin-bottom: 4px;
-    color: #e2e8f0;
-    text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+    margin-bottom: 2px;
+    color: #1c1c1e;
 }
 
 .dice-label {
     font-size: 11px;
     font-weight: 600;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
+    color: #8e8e93;
+    letter-spacing: -0.2px;
 }
 
-/* iOS 27 霓光粒子相配成功態 (Neon Spatial Glow) */
+/* iOS 高亮綠色相配成功態 */
 .dice-card.matched {
-    background: linear-gradient(135deg, rgba(0, 255, 136, 0.22) 0%, rgba(0, 210, 255, 0.22) 100%);
-    border: 1px solid rgba(0, 255, 136, 0.7);
-    box-shadow: 0 0 35px rgba(0, 255, 136, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.6);
-    transform: translateY(-6px) scale(1.06);
+    background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
+    border: none;
+    box-shadow: 0 10px 25px rgba(52, 199, 89, 0.38);
+    transform: translateY(-4px) scale(1.05);
 }
 
 .dice-card.matched .dice-icon {
-    color: #00ff88;
-    text-shadow: 0 0 20px rgba(0, 255, 136, 0.9);
+    color: #ffffff;
 }
 
 .dice-card.matched .dice-label {
-    color: #00ff88;
-    font-weight: 800;
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+    color: #ffffff;
+    font-weight: 700;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -115,22 +112,22 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 主頁面標頭與 iOS 27 空間規則卡片
-st.title("🎲 6 面骰子相配實驗 (iOS 27 Edition)")
+# 4. 主頁面標頭與規則說明卡片
+st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
 
 st.markdown("""
-<div class="ios27-card">
-    <div style="font-size: 15px; line-height: 1.7; color: #e2e8f0;">
-        ✨ <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲結果點數等於 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
+<div class="ios-card">
+    <div style="font-size: 15px; line-height: 1.6; color: #1c1c1e;">
+        📌 <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲結果點數等於 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
         只要 6 次丟擲中<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
-        🌐 <b>理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
+        🎯 <b>理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # 5. 控制面板
 with st.sidebar:
-    st.header("⚙️ Spatial 控制面板")
+    st.header("⚙️ 模擬控制面板")
     total_n = st.slider("模擬總次數 (N)", 100, 2000, 1000, 100)
     fps = st.slider("動畫幀率 (FPS)", 5, 40, 20)
     seed = st.number_input("隨機種子 (Seed)", 0, 9999, 42)
@@ -138,9 +135,9 @@ with st.sidebar:
     st.divider()
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        start_btn = st.button("🚀 空間動畫", type="primary", use_container_width=True)
+        start_btn = st.button("🚀 開始動畫", type="primary", use_container_width=True)
     with col_btn2:
-        quick_btn = st.button("⚡ 極速結算", use_container_width=True)
+        quick_btn = st.button("⚡ 直接結算", use_container_width=True)
 
 p_theoretical = 1 - (5/6)**6
 
@@ -148,7 +145,7 @@ p_theoretical = 1 - (5/6)**6
 if start_btn or quick_btn:
     rolls, cum_successes, cum_p = run_simulation(total_n, seed)
     
-    st.subheader("📈 全息數據儀表板")
+    st.subheader("📈 數據儀表板")
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     
     kpi_n = m_col1.metric("當前模擬次數", "0")
@@ -157,12 +154,12 @@ if start_btn or quick_btn:
     kpi_theo = m_col4.metric("理論 P(A)", f"{p_theoretical:.4f}")
 
     with st.container(border=True):
-        st.markdown("**🎲 即時 3D 骰子矩陣**")
+        st.markdown("**🎲 最新一次丟擲結果**")
         dice_spot = st.empty()
         dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("**📊 全息概率收斂軌跡**")
+        st.markdown("**📊 相對頻率 P(A) 收斂軌跡**")
         chart_spot = st.empty()
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
@@ -192,9 +189,9 @@ if start_btn or quick_btn:
             
         progress_bar.empty()
 
-    st.success(f"✨ 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
+    st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
-    st.subheader("📊 指定模擬次數統計數據 (b)")
+    st.subheader("📊 指定模擬次數統計結果 (b)")
     targets = [n for n in [50, 100, 250, 500, 750, 1000] if n <= total_n]
     table_df = pd.DataFrame({
         '模擬次數 (n)': targets,
@@ -205,4 +202,4 @@ if start_btn or quick_btn:
     st.dataframe(table_df, use_container_width=True, hide_index=True)
 
 else:
-    st.info("👈 請點擊左側控制面板的 **「🚀 空間動畫」** 或 **「⚡ 極速結算」** 啟動模擬！")
+    st.info("👈 請點擊左側控制面板的 **「🚀 開始動畫」** 或 **「⚡ 直接結算」** 啟動實驗模擬！")
