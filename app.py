@@ -6,13 +6,13 @@ import plotly.graph_objects as go
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 (iOS HD Edition)",
+    page_title="🎲 骰子相配實驗 (iOS Ultra Clean)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 強效 CSS 樣式 (相容深淺色模式與 iOS 質感)
+# 2. 強效 CSS 樣式
 st.markdown("""
 <style>
 html, body, .stApp {
@@ -22,7 +22,7 @@ html, body, .stApp {
 }
 
 .main .block-container {
-    padding-top: 2.5rem !important;
+    padding-top: 2rem !important;
     padding-bottom: 2rem !important;
     max-width: 1200px;
 }
@@ -112,13 +112,14 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 防閃爍 Plotly 圖表生成器 (包含軌跡數據圓點)
-def build_stable_plotly_chart(df_data, is_final=False):
+# 4. 高畫質無瑕疵 Plotly 圖表生成器
+def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
+    current_count = len(df_reset)
     
     fig = go.Figure()
 
-    # 理論 P(A)
+    # 理論 P(A) 參考虛線 (紅色)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
@@ -128,40 +129,41 @@ def build_stable_plotly_chart(df_data, is_final=False):
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 模擬 P(A) (恢復帶數據點的模式 lines+markers)
+    # 智慧切換模式：點數過多時自動轉為純折線，避免圖表被藍點塞滿
+    plot_mode = 'lines+markers' if current_count <= 100 else 'lines'
+    
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['模擬 P(A)'],
-        mode='lines+markers',
+        mode=plot_mode,
         name='模擬 P(A)',
-        line=dict(color='#007AFF', width=2),
-        marker=dict(size=4, color='#007AFF', opacity=0.8),
+        line=dict(color='#007AFF', width=2.2),
+        marker=dict(size=5, color='#007AFF', opacity=0.9),
         hovertemplate='模擬次數 n: %{x}<br>估算 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    yaxis_config = dict(
-        title='相對頻率 P(A)',
-        showgrid=True,
-        gridcolor='#f2f2f7',
-        zeroline=False,
-        tickformat='.3f'
-    )
-    if not is_final:
-        yaxis_config['range'] = [0.3, 0.9]
-
+    # 固定 X 軸與 Y 軸範圍，徹底消除閃爍與伸縮跳動
     fig.update_layout(
-        height=380,
-        margin=dict(l=10, r=10, t=25, b=10),
+        height=390,
+        margin=dict(l=15, r=15, t=30, b=15),
         paper_bgcolor='#ffffff',
         plot_bgcolor='#ffffff',
         hovermode='x unified',
         xaxis=dict(
             title='模擬次數 (n)',
+            range=[1, max(total_n_setting, 10)],
             showgrid=True,
             gridcolor='#f2f2f7',
             zeroline=False
         ),
-        yaxis=yaxis_config,
+        yaxis=dict(
+            title='相對頻率 P(A)',
+            range=[0.35, 0.95],
+            showgrid=True,
+            gridcolor='#f2f2f7',
+            zeroline=False,
+            tickformat='.3f'
+        ),
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -173,7 +175,7 @@ def build_stable_plotly_chart(df_data, is_final=False):
     )
     return fig
 
-# 5. 頁面標頭
+# 5. 主頁面內容
 st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
 
 st.markdown("""
@@ -186,7 +188,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 控制面板
+# 6. 側邊欄控制
 with st.sidebar:
     st.header("⚙️ 模擬控制面板")
     
@@ -222,7 +224,7 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 7. 主體驗區域
+# 7. 主數據區塊
 if start_btn or quick_btn:
     rolls, cum_successes, cum_p = run_simulation(total_n, seed)
     
@@ -240,7 +242,7 @@ if start_btn or quick_btn:
         dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(動畫完成後可自由放大/縮放)*")
+        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(右上角可全螢幕，可透過滾輪/框選自由放大細節)*")
         chart_spot = st.empty()
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
@@ -258,7 +260,7 @@ if start_btn or quick_btn:
         kpi_p.metric("估算 P(A)", f"{cum_p[-1]:.4f}", delta=f"{cum_p[-1]-p_theoretical:.4f}")
         
         dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
-        chart_spot.plotly_chart(build_stable_plotly_chart(df_chart, is_final=True), use_container_width=True, config=plotly_config)
+        chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
     else:
         progress_bar = st.progress(0)
         chunk = max(1, total_n // 40)
@@ -271,12 +273,12 @@ if start_btn or quick_btn:
             kpi_p.metric("估算 P(A)", f"{cum_p[i-1]:.4f}", delta=f"{cum_p[i-1]-p_theoretical:.4f}")
             
             dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
-            chart_spot.plotly_chart(build_stable_plotly_chart(df_chart.iloc[:i], is_final=False), use_container_width=True, config=plotly_config)
+            chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:i], total_n), use_container_width=True, config=plotly_config)
             
             time.sleep(1 / fps)
             
         progress_bar.empty()
-        chart_spot.plotly_chart(build_stable_plotly_chart(df_chart, is_final=True), use_container_width=True, config=plotly_config)
+        chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
 
     st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
