@@ -5,66 +5,85 @@ import streamlit as st
 
 # 1. 頁面配置
 st.set_page_config(
-    page_title="🎲 骰子相配實驗 Monte Carlo 模擬",
+    page_title="🎲 骰子相配實驗 (iOS Edition)",
     page_icon="🎲",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS 樣式注入
+# 2. 注入 iOS 風格 CSS 樣式 (Glassmorphism + SF Pro 字體 + iOS 圓角與綠/藍配色)
 st.markdown("""
 <style>
+/* 全局背景與 iOS SF 字體系 */
 .stApp {
-    background-color: #f8fafc;
+    background-color: #f2f2f7 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
 }
-.info-card {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+/* iOS 毛玻璃卡片基底 */
+.ios-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
+
+/* 骰子展示容器 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    margin: 10px 0;
+    gap: 14px;
+    margin: 12px 0;
     flex-wrap: wrap;
 }
+
+/* iOS 經典大圓角骰子卡片 (Squircle) */
 .dice-card {
-    width: 75px;
-    height: 85px;
+    width: 76px;
+    height: 90px;
     background: #ffffff;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
+    border-radius: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.03);
 }
+
 .dice-icon {
-    font-size: 36px;
+    font-size: 40px;
     line-height: 1;
     margin-bottom: 2px;
+    color: #1c1c1e;
 }
+
 .dice-label {
     font-size: 11px;
     font-weight: 600;
-    color: #64748b;
+    color: #8e8e93;
+    letter-spacing: -0.2px;
 }
+
+/* iOS 綠色成功態 (System Green Glow) */
 .dice-card.matched {
-    border-color: #10b981;
-    background: #ecfdf5;
-    box-shadow: 0 8px 12px -2px rgba(16, 185, 129, 0.25);
-    transform: translateY(-2px);
+    background: #34c759;
+    box-shadow: 0 6px 18px rgba(52, 199, 89, 0.35);
+    transform: scale(1.04);
+    border: none;
 }
+
 .dice-card.matched .dice-icon {
-    color: #059669;
+    color: #ffffff;
 }
+
 .dice-card.matched .dice-label {
-    color: #047857;
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 700;
 }
 </style>
@@ -81,7 +100,7 @@ def render_dice_html(rolls):
         cards_html.append(f'<div class="{card_class}"><span class="dice-icon">{DICE_ICONS[val]}</span><span class="dice-label">{badge}</span></div>')
     return f'<div class="dice-wrapper">{"".join(cards_html)}</div>'
 
-# 3. 數據計算邏輯
+# 3. 高效向量化計算邏輯
 @st.cache_data
 def run_simulation(total_n, seed):
     np.random.seed(seed)
@@ -92,20 +111,22 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 實驗規則卡片
-st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
+# 4. 主頁面標頭與規則說明卡片
+st.title("🎲 6 面骰子相配實驗")
 
 st.markdown("""
-<div class="info-card">
-    📌 <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲結果為點數 $k$（$k=1..6$），則稱為<b>「相配」</b>。<br>
-    只要 6 次丟擲中<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
-    🎯 <b>理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
+<div class="ios-card">
+    <div style="font-size: 15px; color: #1c1c1e; line-height: 1.6;">
+        <b>📌 實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲結果為點數 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
+        只要 6 次丟擲中<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
+        <b>🎯 理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 # 5. 控制面板
 with st.sidebar:
-    st.header("⚙️ 模擬控制面板")
+    st.header("⚙️ 模擬控制")
     total_n = st.slider("模擬總次數 (N)", 100, 2000, 1000, 100)
     fps = st.slider("動畫流暢度 (FPS)", 5, 40, 20)
     seed = st.number_input("隨機種子 (Seed)", 0, 9999, 42)
