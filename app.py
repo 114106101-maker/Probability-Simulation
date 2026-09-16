@@ -225,15 +225,19 @@ if "total_n" not in st.session_state:
 # 6. 主頁面標題與簡介
 st.title("🎲 6 面骰子相配實驗")
 
-st.markdown("""
+st.markdown(
+    textwrap.dedent("""
 <div class="ios-card">
-    <div style="font-size: 15px; line-height: 1.6; color: #1c1c1e;">
-        📌 <b>實驗規則：</b> 丟擲一粒公平骰子 6 次。若第 $k$ 次丟擲點數等於 $k$（$k=1..6$），稱為<b>「相配」</b>。<br>
-        6 次中只要<b>至少發生 1 次相配</b>即算成功（事件 $A$）。<br>
-        🎯 <b>理論成功概率：</b> $P(A) = 1 - (\\frac{5}{6})^6 \\approx 0.6651$
+    <div style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #1c1c1e;">🎲 6 面骰子相配實驗</div>
+    <div style="font-size: 14px; line-height: 1.6; color: #3a3a3c;">
+        📌 <b>規則：</b> 丟擲一粒公平骰子 6 次，若第 <i>k</i> 次丟擲點數等於 <i>k</i>（<i>k</i> = 1..6）稱為<b>「相配」</b>。<br>
+        6 次中只要<b>至少發生 1 次相配</b>即算成功（事件 A）。<br>
+        🎯 <b>理論成功概率：</b> P(A) = 1 - (5/6)⁶ ≈ 0.6651
     </div>
 </div>
-""", unsafe_allow_html=True)
+"""),
+    unsafe_allow_html=True,
+)
 
 # 7. 側邊欄控制
 with st.sidebar:
