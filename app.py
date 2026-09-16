@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 強效 CSS 樣式
+# 2. 強效 CSS 樣式 (包含骰子動態彈跳特效)
 st.markdown("""
 <style>
 html, body, .stApp {
@@ -48,6 +48,13 @@ html, body, .stApp {
     flex-wrap: wrap;
 }
 
+/* 骰子更新時的彈跳動畫特效 */
+@keyframes dice-pop {
+    0% { transform: scale(0.85) translateY(-6px); opacity: 0.6; }
+    50% { transform: scale(1.08) translateY(2px); opacity: 0.9; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 .dice-card {
     width: 76px;
     height: 90px;
@@ -59,7 +66,7 @@ html, body, .stApp {
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border: 1px solid #e5e5ea;
-    transition: all 0.25s ease;
+    animation: dice-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .dice-icon {
@@ -112,10 +119,9 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 高畫質無瑕疵 Plotly 圖表生成器
+# 4. 保留圓點的高畫質 Plotly 圖表生成器
 def build_clean_plotly_chart(df_data, total_n_setting):
     df_reset = df_data.reset_index().rename(columns={'index': 'n'})
-    current_count = len(df_reset)
     
     fig = go.Figure()
 
@@ -129,20 +135,18 @@ def build_clean_plotly_chart(df_data, total_n_setting):
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 智慧切換模式：點數過多時自動轉為純折線，避免圖表被藍點塞滿
-    plot_mode = 'lines+markers' if current_count <= 100 else 'lines'
-    
+    # 模擬 P(A) (全時保留圓點模式 lines+markers)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['模擬 P(A)'],
-        mode=plot_mode,
+        mode='lines+markers',
         name='模擬 P(A)',
-        line=dict(color='#007AFF', width=2.2),
-        marker=dict(size=5, color='#007AFF', opacity=0.9),
+        line=dict(color='#007AFF', width=1.8),
+        marker=dict(size=3.5, color='#007AFF', opacity=0.85),
         hovertemplate='模擬次數 n: %{x}<br>估算 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 固定 X 軸與 Y 軸範圍，徹底消除閃爍與伸縮跳動
+    # 固定 X 軸與 Y 軸範圍
     fig.update_layout(
         height=390,
         margin=dict(l=15, r=15, t=30, b=15),
@@ -263,10 +267,13 @@ if start_btn or quick_btn:
         chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
     else:
         progress_bar = st.progress(0)
-        chunk = max(1, total_n // 40)
         
-        for i in range(1, total_n + 1, chunk):
-            progress_bar.progress(i / total_n)
+        # 建立影格序列：確保均勻取樣且最後一影格必定為 total_n
+        num_frames = min(total_n, 35)
+        frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
+        
+        for idx, i in enumerate(frame_indices):
+            progress_bar.progress(int((idx + 1) / len(frame_indices) * 100))
             
             kpi_n.metric("當前模擬次數", f"{i}")
             kpi_succ.metric("成功次數 (事件 A)", f"{cum_successes[i-1]}")
@@ -278,7 +285,6 @@ if start_btn or quick_btn:
             time.sleep(1 / fps)
             
         progress_bar.empty()
-        chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
 
     st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
