@@ -45,7 +45,6 @@ html, body, .stApp {
     text-align: center;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.04);
-    transition: transform 0.2s ease;
 }
 
 .ios-kpi-title {
@@ -89,7 +88,6 @@ html, body, .stApp {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.06);
     animation: ios-spring-pop 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .dice-icon {
@@ -117,7 +115,6 @@ html, body, .stApp {
     color: #ffffff !important;
 }
 
-/* 覆蓋 Streamlit 預設按鈕與側邊欄風格 */
 div[data-testid="stSidebar"] {
     background-color: #ffffff !important;
     border-right: 1px solid rgba(0,0,0,0.05);
@@ -126,7 +123,6 @@ div[data-testid="stSidebar"] {
 .stButton>button {
     border-radius: 14px !important;
     font-weight: 600 !important;
-    padding: 0.5rem 1rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -167,7 +163,6 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     
     fig = go.Figure()
 
-    # 理論 P(A) 參考虛線 (iOS System Red)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['理論 P(A)'],
@@ -177,7 +172,6 @@ def build_clean_plotly_chart(df_data, total_n_setting):
         hovertemplate='理論 P(A): %{y:.4f}<extra></extra>'
     ))
 
-    # 模擬 P(A) (iOS System Blue，帶圓點)
     fig.add_trace(go.Scatter(
         x=df_reset['n'],
         y=df_reset['模擬 P(A)'],
@@ -220,7 +214,15 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     )
     return fig
 
-# 5. 主頁面標題與簡介
+# 5. 初始化 Session State (動畫播放狀態管理)
+if "anim_status" not in st.session_state:
+    st.session_state.anim_status = "idle"  # idle, running, paused, finished
+if "current_step_idx" not in st.session_state:
+    st.session_state.current_step_idx = 0
+if "total_n" not in st.session_state:
+    st.session_state.total_n = 1000
+
+# 6. 主頁面標題與簡介
 st.title("🎲 6 面骰子相配實驗")
 
 st.markdown("""
@@ -233,18 +235,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 側邊欄控制
+# 7. 側邊欄控制
 with st.sidebar:
     st.header("⚙️ 控制面板")
-    
-    if "total_n" not in st.session_state:
-        st.session_state.total_n = 1000
 
     def sync_from_slider():
         st.session_state.total_n = st.session_state.slider_n
+        st.session_state.anim_status = "idle"
 
     def sync_from_input():
         st.session_state.total_n = st.session_state.input_n
+        st.session_state.anim_status = "idle"
 
     st.session_state.slider_n = st.session_state.total_n
     st.session_state.input_n = st.session_state.total_n
@@ -257,84 +258,115 @@ with st.sidebar:
         st.number_input("輸入次數", 100, 10000, 100, key="input_n", on_change=sync_from_input, label_visibility="collapsed")
 
     total_n = st.session_state.total_n
-    # 預設調降 FPS 讓動畫更舒緩，並可自訂
-    fps = st.slider("動畫速率 (FPS)", 2, 25, 10)
+    fps = st.slider("動畫速率 (FPS)", 2, 25, 8)
     seed = st.number_input("隨機種子 (Seed)", 0, 9999, 42)
     
     st.divider()
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        start_btn = st.button("🚀 開始動畫", type="primary", use_container_width=True)
-    with col_btn2:
-        quick_btn = st.button("⚡ 直接結算", use_container_width=True)
+
+    # 動畫控制按鈕
+    col_b1, col_b2, col_b3 = st.columns(3)
+    
+    start_click = col_b1.button("🚀 開始", type="primary", use_container_width=True)
+    
+    # 動態按鈕名稱：根據當前狀態顯示「暫停」或「繼續」
+    pause_label = "▶️ 繼續" if st.session_state.anim_status == "paused" else "⏸️ 暫停"
+    pause_click = col_b2.button(pause_label, use_container_width=True)
+    
+    quick_click = col_b3.button("⚡ 結算", use_container_width=True)
+
+    # 處理按鈕觸發事件
+    if start_click:
+        st.session_state.anim_status = "running"
+        st.session_state.current_step_idx = 0
+        st.rerun()
+
+    if pause_click:
+        if st.session_state.anim_status == "running":
+            st.session_state.anim_status = "paused"
+        elif st.session_state.anim_status == "paused":
+            st.session_state.anim_status = "running"
+        st.rerun()
+
+    if quick_click:
+        st.session_state.anim_status = "finished"
+        st.rerun()
 
 p_theoretical = 1 - (5/6)**6
 
-# 7. 主數據展現區塊
-if start_btn or quick_btn:
-    rolls, cum_successes, cum_p = run_simulation(total_n, seed)
-    
-    st.subheader("📈 數據儀表板")
-    
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    spot_kpi1 = kpi1.empty()
-    spot_kpi2 = kpi2.empty()
-    spot_kpi3 = kpi3.empty()
-    spot_kpi4 = kpi4.empty()
+# 8. 數據準備與渲染 logic
+rolls, cum_successes, cum_p = run_simulation(total_n, seed)
+num_frames = min(total_n, 60)
+frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
 
-    spot_kpi1.markdown(render_kpi_html("模擬次數", "0"), unsafe_allow_html=True)
-    spot_kpi2.markdown(render_kpi_html("成功次數", "0"), unsafe_allow_html=True)
-    spot_kpi3.markdown(render_kpi_html("估算 P(A)", "0.0000", "#007AFF"), unsafe_allow_html=True)
+# 主數據面板
+st.subheader("📈 數據儀表板")
+
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+spot_kpi1 = kpi1.empty()
+spot_kpi2 = kpi2.empty()
+spot_kpi3 = kpi3.empty()
+spot_kpi4 = kpi4.empty()
+
+with st.container():
+    st.markdown("<div style='margin-top: 10px;'><b>🎲 當前丟擲結果</b></div>", unsafe_allow_html=True)
+    dice_spot = st.empty()
+
+with st.container():
+    st.markdown("<div style='margin-top: 15px;'><b>📊 相對頻率 P(A) 收斂軌跡</b></div>", unsafe_allow_html=True)
+    chart_spot = st.empty()
+
+df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
+
+plotly_config = {
+    'scrollZoom': True,
+    'displayModeBar': True,
+    'displaylogo': False,
+    'modeBarButtonsToRemove': ['lasso2d']
+}
+
+# 渲染特定影格的 UI
+def render_frame_ui(frame_n):
+    spot_kpi1.markdown(render_kpi_html("模擬次數", f"{frame_n}"), unsafe_allow_html=True)
+    spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[frame_n-1]}"), unsafe_allow_html=True)
+    spot_kpi3.markdown(render_kpi_html("估算 P(A)", f"{cum_p[frame_n-1]:.4f}", "#007AFF"), unsafe_allow_html=True)
     spot_kpi4.markdown(render_kpi_html("理論 P(A)", f"{p_theoretical:.4f}", "#FF3B30"), unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown("<div style='margin-top: 10px;'><b>🎲 當前丟擲結果</b></div>", unsafe_allow_html=True)
-        dice_spot = st.empty()
-        dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
+    dice_spot.markdown(render_dice_html(rolls[frame_n-1]), unsafe_allow_html=True)
+    chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:frame_n], total_n), use_container_width=True, config=plotly_config)
 
-    with st.container():
-        st.markdown("<div style='margin-top: 15px;'><b>📊 相對頻率 P(A) 收斂軌跡</b></div>", unsafe_allow_html=True)
-        chart_spot = st.empty()
-        
-    df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
+# 根據當前動畫狀態執行對應動作
+if st.session_state.anim_status == "idle":
+    render_frame_ui(1)
+    st.info("👈 請點擊左側面板的 **「🚀 開始」** 播放動畫，或 **「⚡ 結算」** 直接觀看結果！")
 
-    plotly_config = {
-        'scrollZoom': True,
-        'displayModeBar': True,
-        'displaylogo': False,
-        'modeBarButtonsToRemove': ['lasso2d']
-    }
-
-    if quick_btn:
-        spot_kpi1.markdown(render_kpi_html("模擬次數", f"{total_n}"), unsafe_allow_html=True)
-        spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[-1]}"), unsafe_allow_html=True)
-        spot_kpi3.markdown(render_kpi_html("估算 P(A)", f"{cum_p[-1]:.4f}", "#007AFF"), unsafe_allow_html=True)
-        
-        dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
-        chart_spot.plotly_chart(build_clean_plotly_chart(df_chart, total_n), use_container_width=True, config=plotly_config)
-    else:
-        progress_bar = st.progress(0)
-        
-        # 提高採樣密度至 60 影格，搭配細膩 timing 控制動畫節奏
-        num_frames = min(total_n, 60)
-        frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
-        
-        for idx, i in enumerate(frame_indices):
-            progress_bar.progress(int((idx + 1) / len(frame_indices) * 100))
-            
-            spot_kpi1.markdown(render_kpi_html("模擬次數", f"{i}"), unsafe_allow_html=True)
-            spot_kpi2.markdown(render_kpi_html("成功次數", f"{cum_successes[i-1]}"), unsafe_allow_html=True)
-            spot_kpi3.markdown(render_kpi_html("估算 P(A)", f"{cum_p[i-1]:.4f}", "#007AFF"), unsafe_allow_html=True)
-            
-            dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
-            chart_spot.plotly_chart(build_clean_plotly_chart(df_chart.iloc[:i], total_n), use_container_width=True, config=plotly_config)
-            
-            time.sleep(1 / fps)
-            
-        progress_bar.empty()
-
+elif st.session_state.anim_status == "finished":
+    render_frame_ui(total_n)
     st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}")
 
+elif st.session_state.anim_status == "paused":
+    current_n = frame_indices[st.session_state.current_step_idx]
+    render_frame_ui(current_n)
+    st.warning(f"⏸️ 動畫已暫停於第 {current_n} 次模擬，點擊左側 **「▶️ 繼續」** 可繼續播放。")
+
+elif st.session_state.anim_status == "running":
+    progress_bar = st.progress(0)
+    
+    start_idx = st.session_state.current_step_idx
+    for idx in range(start_idx, len(frame_indices)):
+        st.session_state.current_step_idx = idx
+        current_n = frame_indices[idx]
+        
+        progress_bar.progress(int((idx + 1) / len(frame_indices) * 100))
+        render_frame_ui(current_n)
+        
+        time.sleep(1 / fps)
+    
+    progress_bar.empty()
+    st.session_state.anim_status = "finished"
+    st.rerun()
+
+# 底部數據表格
+if st.session_state.anim_status in ["paused", "finished"]:
     st.subheader("📊 指定模擬次數統計結果")
     targets = [n for n in [50, 100, 250, 500, 750, 1000] if n <= total_n]
     table_df = pd.DataFrame({
@@ -344,6 +376,3 @@ if start_btn or quick_btn:
         '理論 P(A)': f"{p_theoretical:.4f}"
     })
     st.dataframe(table_df, use_container_width=True, hide_index=True)
-
-else:
-    st.info("👈 請點擊左側面板的 **「🚀 開始動畫」** 或 **「⚡ 直接結算」** 啟動實驗！")
