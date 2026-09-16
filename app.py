@@ -2,6 +2,7 @@ import time
 import numpy as np
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 # 1. 頁面配置
 st.set_page_config(
@@ -11,17 +12,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 注入 iOS 純白空間感 CSS 樣式 (Light Spatial Glass)
+# 2. 注入 iOS 純白空間感 CSS 樣式
 st.markdown("""
 <style>
-/* 全局純白背景與 SF Pro 字體系 */
 .stApp {
     background-color: #ffffff !important;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
     color: #1c1c1e;
 }
-
-/* iOS 空間懸浮毛玻璃卡片 (Light Glass) */
 .ios-card {
     background: rgba(248, 249, 250, 0.85);
     backdrop-filter: blur(20px);
@@ -32,8 +30,6 @@ st.markdown("""
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
-
-/* 骰子展示容器 */
 .dice-wrapper {
     display: flex;
     justify-content: center;
@@ -41,8 +37,6 @@ st.markdown("""
     margin: 14px 0;
     flex-wrap: wrap;
 }
-
-/* iOS 超圓角懸浮骰子卡片 */
 .dice-card {
     width: 80px;
     height: 94px;
@@ -56,33 +50,27 @@ st.markdown("""
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
-
 .dice-icon {
     font-size: 40px;
     line-height: 1;
     margin-bottom: 2px;
     color: #1c1c1e;
 }
-
 .dice-label {
     font-size: 11px;
     font-weight: 600;
     color: #8e8e93;
     letter-spacing: -0.2px;
 }
-
-/* iOS 高亮綠色相配成功態 */
 .dice-card.matched {
     background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
     border: none;
     box-shadow: 0 10px 25px rgba(52, 199, 89, 0.38);
     transform: translateY(-4px) scale(1.05);
 }
-
 .dice-card.matched .dice-icon {
     color: #ffffff;
 }
-
 .dice-card.matched .dice-label {
     color: #ffffff;
     font-weight: 700;
@@ -112,7 +100,58 @@ def run_simulation(total_n, seed):
     cum_p = cum_successes / np.arange(1, total_n + 1)
     return rolls, cum_successes, cum_p
 
-# 4. 主頁面標頭與規則說明卡片
+# 4. 具備滑鼠動態放大效果的 Altair 互動圖表函數
+def build_interactive_chart(df_data):
+    df_reset = df_data.reset_index().rename(columns={'index': 'n'})
+    
+    # 滑鼠選擇器 (捕捉最近的數據點)
+    hover = alt.selection_point(on='pointerover', nearest=True, empty=False)
+
+    # 理論概率基準線
+    line_theo = alt.Chart(df_reset).mark_line(
+        color='#ff3b30', 
+        strokeWidth=2, 
+        strokeDash=[5, 5]
+    ).encode(
+        x='n:Q',
+        y='理論 P(A):Q'
+    )
+
+    # 模擬相對頻率折線
+    line_sim = alt.Chart(df_reset).mark_line(
+        color='#34c759', 
+        strokeWidth=2.5
+    ).encode(
+        x=alt.X('n:Q', title='模擬次數 (n)'),
+        y=alt.Y('模擬 P(A):Q', title='相對頻率 P(A)', scale=alt.Scale(domain=[0, 1]))
+    )
+
+    # 動態懸停放大節點 (Hover Zoom Effect)
+    hover_points = alt.Chart(df_reset).mark_circle().encode(
+        x='n:Q',
+        y='模擬 P(A):Q',
+        # 滑鼠移上去時點體積放大至 180，平時微小 (15)
+        size=alt.condition(hover, alt.value(180), alt.value(15)),
+        color=alt.condition(hover, alt.value('#28a745'), alt.value('#34c759')),
+        tooltip=[
+            alt.Tooltip('n:Q', title='模擬次數 (n)'),
+            alt.Tooltip('模擬 P(A):Q', title='估算 P(A)', format='.4f'),
+            alt.Tooltip('理論 P(A):Q', title='理論 P(A)', format='.4f')
+        ]
+    ).add_params(hover)
+
+    # 圖表融合與樣式修飾
+    chart = (line_theo + line_sim + hover_points).properties(
+        height=360
+    ).configure_view(
+        strokeWidth=0
+    ).configure_axis(
+        gridColor='rgba(0,0,0,0.05)',
+        domainColor='rgba(0,0,0,0.1)'
+    )
+    return chart
+
+# 5. 主頁面標頭與規則說明
 st.title("🎲 6 面骰子相配實驗 (Example 1-1.1)")
 
 st.markdown("""
@@ -125,7 +164,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 5. 控制面板
+# 6. 控制面板
 with st.sidebar:
     st.header("⚙️ 模擬控制面板")
     total_n = st.slider("模擬總次數 (N)", 100, 2000, 1000, 100)
@@ -141,7 +180,7 @@ with st.sidebar:
 
 p_theoretical = 1 - (5/6)**6
 
-# 6. 主體驗區域
+# 7. 主體驗區域
 if start_btn or quick_btn:
     rolls, cum_successes, cum_p = run_simulation(total_n, seed)
     
@@ -159,7 +198,7 @@ if start_btn or quick_btn:
         dice_spot.markdown(render_dice_html([1, 2, 3, 4, 5, 6]), unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("**📊 相對頻率 P(A) 收斂軌跡**")
+        st.markdown("**📊 相對頻率 P(A) 收斂軌跡** *(將滑鼠懸停於折線上可即時放大節點並檢視數據)*")
         chart_spot = st.empty()
         
     df_chart = pd.DataFrame({'模擬 P(A)': cum_p, '理論 P(A)': p_theoretical}, index=np.arange(1, total_n + 1))
@@ -170,7 +209,7 @@ if start_btn or quick_btn:
         kpi_p.metric("估算 P(A)", f"{cum_p[-1]:.4f}", delta=f"{cum_p[-1]-p_theoretical:.4f}")
         
         dice_spot.markdown(render_dice_html(rolls[-1]), unsafe_allow_html=True)
-        chart_spot.line_chart(df_chart, height=350)
+        chart_spot.altair_chart(build_interactive_chart(df_chart), use_container_width=True)
     else:
         progress_bar = st.progress(0)
         chunk = max(1, total_n // 50)
@@ -183,7 +222,7 @@ if start_btn or quick_btn:
             kpi_p.metric("估算 P(A)", f"{cum_p[i-1]:.4f}", delta=f"{cum_p[i-1]-p_theoretical:.4f}")
             
             dice_spot.markdown(render_dice_html(rolls[i-1]), unsafe_allow_html=True)
-            chart_spot.line_chart(df_chart.iloc[:i], height=350)
+            chart_spot.altair_chart(build_interactive_chart(df_chart.iloc[:i]), use_container_width=True)
             
             time.sleep(1 / fps)
             
