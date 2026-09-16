@@ -289,10 +289,10 @@ with st.sidebar:
     st.divider()
 
     col_b1, col_b2, col_b3 = st.columns(3)
-    start_click = col_b1.button("🚀 開始<br>Start", type="primary", use_container_width=True)
-    pause_label = "▶️ 繼續<br>Resume" if st.session_state.anim_status == "paused" else "⏸️ 暫停<br>Pause"
+    start_click = col_b1.button("🚀 開始 Start", type="primary", use_container_width=True)
+    pause_label = "▶️ 繼續 Resume" if st.session_state.anim_status == "paused" else "⏸️ 暫停 Pause"
     pause_click = col_b2.button(pause_label, use_container_width=True)
-    quick_click = col_b3.button("⚡ 結算<br>Finish", use_container_width=True)
+    quick_click = col_b3.button("⚡ 結算 Finish", use_container_width=True)
 
     if start_click:
         st.session_state.anim_status = "running"
