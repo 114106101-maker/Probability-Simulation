@@ -212,10 +212,10 @@ def render_kpi_html(title_cn, title_en, val, color="#1c1c1e"):
 
 # 3. 向量化模擬邏輯 (Vectorized analog logic)
 @st.cache_data
-def run_simulation(total_n, seed):
+def run_simulation(total_n, seed, num_dice):
     np.random.seed(seed)
-    rolls = np.random.randint(1, 7, size=(total_n, 6))
-    matches = (rolls == np.arange(1, 7))
+    rolls = np.random.randint(1, 7, size=(total_n, num_dice))
+    matches = (rolls == np.arange(1, num_dice + 1))
     successes = np.any(matches, axis=1)
     cum_successes = np.cumsum(successes)
     cum_p = cum_successes / np.arange(1, total_n + 1)
@@ -278,32 +278,43 @@ def build_clean_plotly_chart(df_data, total_n_setting):
     )
     return fig
 
-# 5. 初始化 Session State (Initialize Session State)
+# 5. 計算理論概率 (Calculate theoretical probability)
+def calculate_theoretical_probability(num_dice):
+    """
+    計算至少發生一次相配的理論概率
+    每個骰子獨立相配概率為 1/6
+    至少一次相配 = 1 - (沒有任何相配)
+    沒有任何相配 = (5/6)^num_dice
+    """
+    return 1 - (5/6) ** num_dice
+
+# 6. 初始化 Session State (Initialize Session State)
 if "anim_status" not in st.session_state:
     st.session_state.anim_status = "idle"
 if "current_step_idx" not in st.session_state:
     st.session_state.current_step_idx = 0
 if "total_n" not in st.session_state:
     st.session_state.total_n = 1000
+if "num_dice" not in st.session_state:
+    st.session_state.num_dice = 6
 
-# 6. 主頁面說明 (Main page description)
-st.markdown(
-    textwrap.dedent("""
+# 7. 主頁面說明 (Main page description)
+def render_description(num_dice, p_theoretical):
+    description = textwrap.dedent(f"""
 <div class="card">
-    <div style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #1c1c1e;">🎲 6 面骰子相配實驗 (6-Sided Dice Matching Experiment)</div>
+    <div style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #1c1c1e;">🎲 {num_dice} 面骰子相配實驗 ({num_dice}-Sided Dice Matching Experiment)</div>
     <div style="font-size: 14px; line-height: 1.6; color: #3a3a3c;">
-        📌 <b>規則 (Rules)：</b> 丟擲一粒公平骰子 6 次，若第 <i>k</i> 次丟擲點數等於 <i>k</i>（<i>k</i> = 1..6）稱為<b>「相配」</b>。<br>
-        <i>Roll a fair 6-sided die 6 times. If the k-th roll equals k (k=1..6), it is considered a <b>"Match"</b>.</i><br>
-        6 次中只要<b>至少發生 1 次相配</b>即算成功（事件 A）。<br>
-        <i>At least 1 match in 6 rolls counts as a success (Event A).</i><br>
-        🎯 <b>理論成功概率 (Theoretical Probability)：</b> P(A) = 1 - (5/6)⁶ ≈ 0.6651
+        📌 <b>規則 (Rules)：</b> 丟擲一粒公平骰子 {num_dice} 次，若第 <i>k</i> 次丟擲點數等於 <i>k</i>（<i>k</i> = 1..{num_dice}）稱為<b>「相配」</b>。<br>
+        <i>Roll a fair 6-sided die {num_dice} times. If the k-th roll equals k (k=1..{num_dice}), it is considered a <b>"Match"</b>.</i><br>
+        {num_dice} 次中只要<b>至少發生 1 次相配</b>即算成功（事件 A）。<br>
+        <i>At least 1 match in {num_dice} rolls counts as a success (Event A).</i><br>
+        🎯 <b>理論成功概率 (Theoretical Probability)：</b> P(A) = 1 - (5/6)^{num_dice} ≈ {p_theoretical:.4f}
     </div>
 </div>
-"""),
-    unsafe_allow_html=True,
-)
+""")
+    return description
 
-# 7. 側邊欄控制面板 (Sidebar Control Panel)
+# 8. 側邊欄控制面板 (Sidebar Control Panel)
 with st.sidebar:
     st.header("⚙️ 控制面板 (Control Panel)")
 
@@ -314,6 +325,13 @@ with st.sidebar:
     def sync_from_input():
         st.session_state.total_n = st.session_state.input_n
         st.session_state.anim_status = "idle"
+
+    def sync_dice_change():
+        st.session_state.anim_status = "idle"
+        st.session_state.current_step_idx = 0
+
+    st.markdown("**骰子數量 (Number of Dice) / 骰子數 (Dice Count)**")
+    st.session_state.num_dice = st.slider("選擇骰子數 (Select Dice Count)", 1, 10, st.session_state.num_dice, key="dice_slider", on_change=sync_dice_change)
 
     st.session_state.slider_n = st.session_state.total_n
     st.session_state.input_n = st.session_state.total_n
@@ -326,6 +344,7 @@ with st.sidebar:
         st.number_input("輸入次數 (Number Input)", 100, 10000, 100, key="input_n", on_change=sync_from_input, label_visibility="collapsed")
 
     total_n = st.session_state.total_n
+    num_dice = st.session_state.num_dice
     fps = st.slider("動畫速率 (FPS) / Speed", 2, 25, 8)
     seed = st.number_input("隨機種子 (Seed) / Random Seed", 0, 9999, 42)
     
@@ -353,10 +372,13 @@ with st.sidebar:
         st.session_state.anim_status = "finished"
         st.rerun()
 
-p_theoretical = 1 - (5/6)**6
+p_theoretical = calculate_theoretical_probability(num_dice)
 
-# 8. 數據準備與渲染 (Data preparation and rendering)
-rolls, cum_successes, cum_p = run_simulation(total_n, seed)
+# 9. 主頁面說明 (Main page description)
+st.markdown(render_description(num_dice, p_theoretical), unsafe_allow_html=True)
+
+# 10. 數據準備與渲染 (Data preparation and rendering)
+rolls, cum_successes, cum_p = run_simulation(total_n, seed, num_dice)
 num_frames = min(total_n, 60)
 frame_indices = np.unique(np.linspace(1, total_n, num=num_frames, dtype=int))
 
@@ -396,11 +418,11 @@ def render_frame_ui(frame_n):
 
 if st.session_state.anim_status == "idle":
     render_frame_ui(1)
-    st.info("👈 請點擊左側面板的 **「🚀 開始 / Start」** 播放動畫，或 **「⚡ 結算 / Finish」** 直接觀看結果！\n\n*Please click **'Start'** to run the animation, or **'Finish'** for immediate results!*")
+    st.info("👈 請點擊左側面板的 **「🚀 開始 / Start」** 播放動畫，或 **「⚡ 結算 / Finish」** 直接觀看結果！\n\n*Please click **'Start'** to run the animation, or **'Finish'** to see the final results!*")
 
 elif st.session_state.anim_status == "finished":
     render_frame_ui(total_n)
-    st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}\n\n*Simulation Finished! Final Estimated P(A) = {cum_p[-1]:.4f}, absolute error: {abs(cum_p[-1]-p_theoretical):.4f}*")
+    st.success(f"🎉 模擬完成！最終估算 P(A) = {cum_p[-1]:.4f}，與理論值誤差僅 {abs(cum_p[-1]-p_theoretical):.4f}\n\n*Simulation Finished! Final Estimated P(A) = {cum_p[-1]:.4f}, abs error = {abs(cum_p[-1]-p_theoretical):.4f}*")
 
 elif st.session_state.anim_status == "paused":
     current_n = frame_indices[st.session_state.current_step_idx]
